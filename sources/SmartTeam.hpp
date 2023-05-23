@@ -17,7 +17,7 @@ namespace ariel
     public:
         SmartTeam(Character* pLeaderT2);
         ~SmartTeam();
-        // void attack(Team *enemy_team);
+        void attack(Team *enemy_team);
     };
 }
 

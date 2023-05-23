@@ -17,53 +17,108 @@ namespace ariel
     {
     }
 
-    // void SmartTeam::attack(Team *enemy_team)
-    // {
-    //     // Assess the situation
-    //     Character *myLeader = getLeader();
-    //     int myAliveCount = stillAlive();
-    //     int enemyAliveCount = enemy_team->stillAlive();
+    void SmartTeam::attack(Team *enemy_team)
+    {
+        // Similar basic checks as in the parent class
+        if (enemy_team == nullptr)
+        {
+            throw invalid_argument("Cannot attack nullptr team");
+        }
 
-    //     // Prioritize targets
-    //     // In this example, we prioritize the enemy team's leader and characters with low hit points
-    //     Character *enemyLeader = enemy_team->getLeader();
-    //     Character *priorityTarget = enemyLeader;
-    //     for (Character *enemy : enemy_team->fighters)
-    //     {
-    //         if (enemy->isAlive() && enemy->getHitPoints() < priorityTarget->getHitPoints())
-    //         {
-    //             priorityTarget = enemy;
-    //         }
-    //     }
+        if (enemy_team->stillAlive() == 0)
+        {
+            throw runtime_error("Cannot hit a dead team");
+        }
 
-    //     // Coordinate attacks
-    //     for (Character *fighter : fighters)
-    //     {
-    //         if (!fighter->isAlive())
-    //         {
-    //             continue;
-    //         }
+        if (!leader->isAlive())
+        {
+            // Similar leader replacement strategy as in Team class
+            // Find the living character closest to the dead leader
+            double minDistance = numeric_limits<double>::max();
+            Character *newLeader = nullptr;
 
-    //         Cowboy *cowboy = dynamic_cast<Cowboy *>(fighter);
-    //         if (cowboy != nullptr && cowboy->hasboolets())
-    //         {
-    //             cowboy->shoot(priorityTarget);
-    //         }
-    //         else
-    //         {
-    //             Ninja *ninja = dynamic_cast<Ninja *>(fighter);
-    //             if (ninja != nullptr && ninja->distance(priorityTarget) < 1)
-    //             {
-    //                 ninja->slash(priorityTarget);
-    //             }
-    //             else
-    //             {
-    //                 fighter->moveTowards(priorityTarget->getLocation(), fighter->getSpeed());
-    //             }
-    //         }
-    //     }
+            for (Character *fighter : fighters)
+            {
+                if (fighter->isAlive())
+                {
+                    double distance = leader->distance(fighter);
+                    if (distance < minDistance)
+                    {
+                        minDistance = distance;
+                        newLeader = fighter;
+                    }
+                }
+            }
 
-    //     // Adapt to changing circumstances
-    //     // In this example, we do not implement dynamic adaptation, but you can add logic here based on the changing situation during the attack.
-    // }
+            if (newLeader != nullptr)
+            {
+                leader = newLeader;
+            }
+            else
+            {
+                return; // No living character found, the attack ends
+            }
+        }
+
+        // Now, the smart strategy begins:
+        // Attack the enemy with the lowest health first
+        while (stillAlive() > 0 && enemy_team->stillAlive() > 0)
+        {
+            Character *lowestHealthEnemy = nullptr;
+            int minHealth = numeric_limits<int>::max();
+
+            // Find the enemy with the lowest health
+            for (Character *enemy : enemy_team->getFigthers())
+            {
+                if (enemy->isAlive() && enemy->getHitPoints() < minHealth)
+                {
+                    minHealth = enemy->getHitPoints();
+                    lowestHealthEnemy = enemy;
+                }
+            }
+
+            // If no enemy found, end the attack
+            if (lowestHealthEnemy == nullptr)
+            {
+                return;
+            }
+
+            // Perform attacks
+            for (Character *fighter : fighters)
+            {
+                if (!fighter->isAlive())
+                {
+                    continue;
+                }
+
+                Cowboy *cowboy = dynamic_cast<Cowboy *>(fighter);
+                if (cowboy != nullptr)
+                {
+                    cowboy->shoot(lowestHealthEnemy);
+                }
+                else
+                {
+                    Ninja *ninja = dynamic_cast<Ninja *>(fighter);
+                    if (ninja != nullptr)
+                    {
+                        if (ninja->distance(lowestHealthEnemy) < 1)
+                        {
+                            ninja->slash(lowestHealthEnemy);
+                        }
+                        else
+                        {
+                            ninja->move(lowestHealthEnemy);
+                        }
+                    }
+                }
+
+                // If the current enemy character has died, break the loop
+                // The next round will find the new lowest health enemy
+                if (!lowestHealthEnemy->isAlive())
+                {
+                    break;
+                }
+            }
+        }
+    }
 }
