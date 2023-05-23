@@ -19,7 +19,7 @@ namespace ariel
 
     void SmartTeam::attack(Team *enemy_team)
     {
-        // Similar basic checks as in the parent class
+        // Similar basic checks as in Team class
         if (enemy_team == nullptr)
         {
             throw invalid_argument("Cannot attack nullptr team");
@@ -62,61 +62,68 @@ namespace ariel
 
         // Now, the smart strategy begins:
         // Attack the enemy with the lowest health first
-        while (stillAlive() > 0 && enemy_team->stillAlive() > 0)
+
+        Character *lowestHealthEnemy = nullptr;
+        int minHealth = numeric_limits<int>::max();
+
+        // Find the enemy with the lowest health
+        for (Character *enemy : enemy_team->getFigthers())
         {
-            Character *lowestHealthEnemy = nullptr;
-            int minHealth = numeric_limits<int>::max();
-
-            // Find the enemy with the lowest health
-            for (Character *enemy : enemy_team->getFigthers())
+            if (enemy->isAlive() && enemy->getHitPoints() < minHealth)
             {
-                if (enemy->isAlive() && enemy->getHitPoints() < minHealth)
-                {
-                    minHealth = enemy->getHitPoints();
-                    lowestHealthEnemy = enemy;
-                }
+                minHealth = enemy->getHitPoints();
+                lowestHealthEnemy = enemy;
+            }
+        }
+
+        // Perform attacks
+        for (Character *fighter : fighters)
+        {
+            if (!fighter->isAlive())
+            {
+                continue;
             }
 
-            // If no enemy found, end the attack
-            if (lowestHealthEnemy == nullptr)
+            Cowboy *cowboy = dynamic_cast<Cowboy *>(fighter);
+            if (cowboy != nullptr)
             {
-                return;
+                cowboy->shoot(lowestHealthEnemy);
             }
-
-            // Perform attacks
-            for (Character *fighter : fighters)
+            else
             {
-                if (!fighter->isAlive())
+                Ninja *ninja = dynamic_cast<Ninja *>(fighter);
+                if (ninja != nullptr)
                 {
-                    continue;
-                }
-
-                Cowboy *cowboy = dynamic_cast<Cowboy *>(fighter);
-                if (cowboy != nullptr)
-                {
-                    cowboy->shoot(lowestHealthEnemy);
-                }
-                else
-                {
-                    Ninja *ninja = dynamic_cast<Ninja *>(fighter);
-                    if (ninja != nullptr)
+                    if (ninja->distance(lowestHealthEnemy) < 1)
                     {
-                        if (ninja->distance(lowestHealthEnemy) < 1)
-                        {
-                            ninja->slash(lowestHealthEnemy);
-                        }
-                        else
-                        {
-                            ninja->move(lowestHealthEnemy);
-                        }
+                        ninja->slash(lowestHealthEnemy);
+                    }
+                    else
+                    {
+                        ninja->move(lowestHealthEnemy);
                     }
                 }
+            }
 
-                // If the current enemy character has died, break the loop
-                // The next round will find the new lowest health enemy
-                if (!lowestHealthEnemy->isAlive())
+            // If the current enemy character has died find new lowest enemy
+            if (!lowestHealthEnemy->isAlive())
+            {
+                if (enemy_team->stillAlive() == 0)
                 {
-                    break;
+                    return; // no Living enemies to attack
+                }
+                
+                lowestHealthEnemy = nullptr;
+                minHealth = numeric_limits<int>::max();
+
+                 // Find the enemy with the lowest health
+                for (Character *enemy : enemy_team->getFigthers())
+                {
+                    if (enemy->isAlive() && enemy->getHitPoints() < minHealth)
+                    {
+                        minHealth = enemy->getHitPoints();
+                        lowestHealthEnemy = enemy;
+                    }
                 }
             }
         }
