@@ -32,7 +32,6 @@ namespace ariel
 
         if (!leader->isAlive())
         {
-            // Similar leader replacement strategy as in Team class
             // Find the living character closest to the dead leader
             double minDistance = numeric_limits<double>::max();
             Character *newLeader = nullptr;
@@ -60,22 +59,6 @@ namespace ariel
             }
         }
 
-        // Now, the smart strategy begins:
-        // Attack the enemy with the lowest health first
-
-        Character *lowestHealthEnemy = nullptr;
-        int minHealth = numeric_limits<int>::max();
-
-        // Find the enemy with the lowest health
-        for (Character *enemy : enemy_team->getFigthers())
-        {
-            if (enemy->isAlive() && enemy->getHitPoints() < minHealth)
-            {
-                minHealth = enemy->getHitPoints();
-                lowestHealthEnemy = enemy;
-            }
-        }
-
         // Perform attacks
         for (Character *fighter : fighters)
         {
@@ -84,47 +67,74 @@ namespace ariel
                 continue;
             }
 
-            Cowboy *cowboy = dynamic_cast<Cowboy *>(fighter);
-            if (cowboy != nullptr)
+            Ninja *ninja = dynamic_cast<Ninja *>(fighter);
+            if (ninja != nullptr)
             {
-                cowboy->shoot(lowestHealthEnemy);
+                // find closest enemy to attack with each ninja
+                Character *closestToAttackByNinja = nullptr;
+                for (Character *enemy : enemy_team->getFigthers())
+                {
+                    if (enemy->isAlive())
+                    {
+                        if (ninja->distance(enemy) < 1)
+                        {
+                            closestToAttackByNinja = enemy;
+                            break; // dont need to search anymore, found close one
+                        }
+                    }
+                }// after loop or after break
+
+                if (closestToAttackByNinja != nullptr)
+                {
+                    ninja->slash(closestToAttackByNinja);
+                }
+                else
+                {
+                    // find the closest enemy to move to
+                    Character *closestToNinja = nullptr;
+                    double distance = 0;
+                    double min_distance = numeric_limits<int>::max();
+                    for (Character *enemy : enemy_team->getFigthers())
+                    {
+                        if (enemy->isAlive())
+                        {
+                            distance = ninja->distance(enemy);
+                            if (distance < min_distance)
+                            {
+                                closestToNinja = enemy;
+                                min_distance = distance;
+                            }
+                        }
+                    }
+                    ninja->move(closestToNinja);
+                }
             }
             else
             {
-                Ninja *ninja = dynamic_cast<Ninja *>(fighter);
-                if (ninja != nullptr)
+                Cowboy *cowboy = dynamic_cast<Cowboy *>(fighter);
+                if (cowboy != nullptr)
                 {
-                    if (ninja->distance(lowestHealthEnemy) < 1)
+                    // Attack the enemy with the lowest health
+                    Character *lowestHealthEnemy = nullptr;
+                    int minHealth = numeric_limits<int>::max();
+
+                    // Find the enemy with the lowest health
+                    for (Character *enemy : enemy_team->getFigthers())
                     {
-                        ninja->slash(lowestHealthEnemy);
+                        if (enemy->isAlive() && enemy->getHitPoints() < minHealth)
+                        {
+                            minHealth = enemy->getHitPoints();
+                            lowestHealthEnemy = enemy;
+                        }
                     }
-                    else
-                    {
-                        ninja->move(lowestHealthEnemy);
-                    }
+
+                    cowboy->shoot(lowestHealthEnemy);
                 }
             }
 
-            // If the current enemy character has died find new lowest enemy
-            if (!lowestHealthEnemy->isAlive())
+            if (enemy_team->stillAlive() == 0)
             {
-                if (enemy_team->stillAlive() == 0)
-                {
-                    return; // no Living enemies to attack
-                }
-                
-                lowestHealthEnemy = nullptr;
-                minHealth = numeric_limits<int>::max();
-
-                 // Find the enemy with the lowest health
-                for (Character *enemy : enemy_team->getFigthers())
-                {
-                    if (enemy->isAlive() && enemy->getHitPoints() < minHealth)
-                    {
-                        minHealth = enemy->getHitPoints();
-                        lowestHealthEnemy = enemy;
-                    }
-                }
+                return; // no Living enemies to attack
             }
         }
     }
